@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 const bcrypt = require('bcryptjs');
+const cors = require('cors');
 const User = require('./models/User');
 require('./config/passport')(passport);
 
@@ -14,6 +15,11 @@ mongoose.connect('mongodb://localhost:27017/usersystems', {
 }).then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(session({ secret: 'my_super_secret_key_12345', resave: false, saveUninitialized: true }));
 app.use(passport.initialize());
@@ -24,21 +30,19 @@ app.get('/', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { username, password } = req.body;
-  console.log('Registering user:', username);
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
-    await newUser.save();
-    res.status(201).send('User registered');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Error registering user');
-  }
-});
+    const { username, password } = req.body;
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ username, password: hashedPassword });
+      await newUser.save();
+      res.status(201).send('User registered');
+    } catch (error) {
+      console.error('Error registering user:', error);
+      res.status(500).send('Error registering user');
+    }
+  });  
 
 app.post('/login', (req, res, next) => {
-  console.log('Attempting login for:', req.body.username);
   next();
 }, passport.authenticate('local'), (req, res) => {
   res.send('Logged in successfully');
